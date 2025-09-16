@@ -1,7 +1,7 @@
 pragma solidity ^0.8.28;
 
 contract Post{
-    struct Post {
+    struct PostData {
         // Core identification
         uint256 id;                    // Unique post ID
         address author;                // Author's Ethereum address
@@ -28,7 +28,7 @@ contract Post{
     }
 
     // State variables
-    mapping(uint256 => Post) public posts;
+    mapping(uint256 => PostData) public posts;
     mapping(address => uint256[]) public userPosts;
     
     uint256 public nextPostId = 1;
@@ -72,7 +72,7 @@ contract Post{
     ) public returns (uint256) {
         uint256 postId = nextPostId++;
         
-        posts[postId] = Post({
+        posts[postId] = PostData({
             id: postId,
             author: msg.sender,
             content: _content,
@@ -120,7 +120,7 @@ contract Post{
     }
     
     // View functions
-    function getPost(uint256 _postId) public view postExists(_postId) returns (Post memory) {
+    function getPost(uint256 _postId) public view postExists(_postId) returns (PostData memory) {
         return posts[_postId];
     }
     

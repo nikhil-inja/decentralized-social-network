@@ -1,7 +1,7 @@
 pragma solidity ^0.8.28;
 
 contract Comment{
-    struct Comment {
+    struct CommentData {
         // Core identification
         uint256 id;                    // Unique comment ID
         address author;                // Commenter's Ethereum address
@@ -22,7 +22,7 @@ contract Comment{
     }
 
     // State variables
-    mapping(uint256 => Comment) public comments;
+    mapping(uint256 => CommentData) public comments;
     mapping(address => uint256[]) public userComments;
     mapping(uint256 => uint256[]) public postComments;
     
@@ -66,7 +66,7 @@ contract Comment{
     ) public returns (uint256) {
         uint256 commentId = nextCommentId++;
         
-        comments[commentId] = Comment({
+        comments[commentId] = CommentData({
             id: commentId,
             author: msg.sender,
             content: _content,
@@ -103,7 +103,7 @@ contract Comment{
     }
     
     // View functions
-    function getComment(uint256 _commentId) public view commentExists(_commentId) returns (Comment memory) {
+    function getComment(uint256 _commentId) public view commentExists(_commentId) returns (CommentData memory) {
         return comments[_commentId];
     }
     
