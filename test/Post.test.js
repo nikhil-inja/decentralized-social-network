@@ -1,5 +1,5 @@
-const { expect } = require("chai");
-const { ethers } = require("hardhat");
+import { expect } from "chai";
+import { network } from "hardhat";
 
 describe("Post (Refactored)", function () {
   let socialToken;
@@ -8,7 +8,11 @@ describe("Post (Refactored)", function () {
   let author1;
   let tipper1;
 
+  let ethers;
+
   beforeEach(async function () {
+    const { ethers: ethersInstance } = await network.connect();
+    ethers = ethersInstance;
     [owner, author1, tipper1] = await ethers.getSigners();
 
     // 1. Deploy the dependency contract: SocialToken

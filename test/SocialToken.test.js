@@ -1,5 +1,5 @@
-const { expect } = require("chai");
-const { ethers } = require("hardhat");
+import { expect } from "chai";
+import { network } from "hardhat";
 
 describe("SocialToken", function () {
   let socialToken;
@@ -7,8 +7,12 @@ describe("SocialToken", function () {
   let addr1;
   let addr2;
 
+  let ethers;
+
   // This hook runs before each test, deploying a fresh contract instance
   beforeEach(async function () {
+    const { ethers: ethersInstance } = await network.connect();
+    ethers = ethersInstance;
     [owner, addr1, addr2] = await ethers.getSigners();
     const SocialTokenFactory = await ethers.getContractFactory("SocialToken");
     socialToken = await SocialTokenFactory.deploy();
@@ -84,6 +88,59 @@ describe("SocialToken", function () {
         await expect(
             socialToken.connect(owner).transfer(addr1.address, transferAmount)
         ).to.be.revertedWithCustomError(socialToken, "ERC20InsufficientBalance");
+    });
+  });
+
+  describe("Allowances and transferFrom", function () {
+    beforeEach(async function() {
+      // Mint 1000 tokens to addr1 for testing
+      await socialToken.connect(owner).mint(addr1.address, ethers.parseUnits("1000", 18));
+    });
+
+    it("Should allow a user to approve another account to spend their tokens", async function () {
+      const approveAmount = ethers.parseUnits("100", 18);
+      
+      // addr1 approves addr2 to spend 100 of their tokens
+      await expect(socialToken.connect(addr1).approve(addr2.address, approveAmount))
+        .to.emit(socialToken, "Approval")
+        .withArgs(addr1.address, addr2.address, approveAmount);
+        
+      // Check the allowance
+      const allowance = await socialToken.allowance(addr1.address, addr2.address);
+      expect(allowance).to.equal(approveAmount);
+    });
+
+    it("Should allow an approved spender to transfer tokens on behalf of the owner", async function () {
+      const approveAmount = ethers.parseUnits("200", 18);
+      const transferAmount = ethers.parseUnits("150", 18);
+
+      // addr1 (owner) approves addr2 (spender)
+      await socialToken.connect(addr1).approve(addr2.address, approveAmount);
+      
+      // addr2 (spender) transfers 150 tokens from addr1 to itself (addr2)
+      await socialToken.connect(addr2).transferFrom(addr1.address, addr2.address, transferAmount);
+
+      // Check balances
+      const addr1Balance = await socialToken.balanceOf(addr1.address);
+      const addr2Balance = await socialToken.balanceOf(addr2.address);
+      expect(addr1Balance).to.equal(ethers.parseUnits("850", 18)); // 1000 - 150
+      expect(addr2Balance).to.equal(transferAmount);
+
+      // Check remaining allowance
+      const remainingAllowance = await socialToken.allowance(addr1.address, addr2.address);
+      expect(remainingAllowance).to.equal(ethers.parseUnits("50", 18)); // 200 - 150
+    });
+
+    it("Should fail if a spender tries to transfer more than the approved amount", async function () {
+      const approveAmount = ethers.parseUnits("100", 18);
+      const transferAmount = ethers.parseUnits("101", 18);
+
+      await socialToken.connect(addr1).approve(addr2.address, approveAmount);
+
+      // addr2 tries to transfer 101, but was only approved for 100
+      await expect(
+        socialToken.connect(addr2).transferFrom(addr1.address, owner.address, transferAmount)
+      ).to.be.revertedWithCustomError(socialToken, "ERC20InsufficientAllowance");
     });
   });
 });
