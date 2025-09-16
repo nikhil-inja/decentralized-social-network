@@ -1,13 +1,16 @@
-const { expect } = require("chai");
-const { ethers } = require("hardhat");
+import { expect } from "chai";
+import { network } from "hardhat";
 
 describe("UserProfile", function () {
   let userProfile;
   let owner;
   let addr1; // We'll add another account for future tests
+  let ethers;
 
   // This hook runs once before all tests in this block
   before(async function () {
+    const { ethers: ethersInstance } = await network.connect();
+    ethers = ethersInstance;
     [owner, addr1] = await ethers.getSigners();
     const UserProfileFactory = await ethers.getContractFactory("UserProfile");
     userProfile = await UserProfileFactory.deploy();
