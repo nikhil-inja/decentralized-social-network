@@ -1,151 +1,118 @@
-pragma solidity ^0.8.28;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
 
-contract Comment{
+/**
+ * @title Comment (Refactored)
+ * @dev Manages comments on posts. This version is gas-efficient by storing
+ * comment content on IPFS and includes advanced view functions for frontend convenience.
+ */
+contract Comment {
+    // --- State Variables ---
+
     struct CommentData {
-        // Core identification
-        uint256 id;                    // Unique comment ID
-        address author;                // Commenter's Ethereum address
-        string content;                // Comment content
-        
-        // Relationships
-        uint256 postId;                // ID of the post being commented on
-        
-        // Timestamps
-        uint256 createdAt;             // Block timestamp when created
-        uint256 updatedAt;             // Block timestamp when last updated
-        
-        // Social interactions
-        //uint256 likeCount;             // Number of likes
-        
-        // State management
-        bool isDeleted;                // Soft delete flag
+        uint256 commentId;
+        uint256 postId;         // The ID of the post this comment belongs to.
+        address author;         // Renamed from 'commenter' for consistency.
+        string contentHash;     // CRITICAL: We store a hash of the content, not the content itself.
+        uint256 createdAt;
+        uint256 updatedAt;
+        bool isActive;          // Renamed from 'isDeleted' for consistency with Post.sol
     }
 
-    // State variables
-    mapping(uint256 => CommentData) public comments;
+    // The primary storage for all comments.
+    CommentData[] public comments;
+
+    // Mappings for efficient lookups, a great feature from the provided contract.
     mapping(address => uint256[]) public userComments;
     mapping(uint256 => uint256[]) public postComments;
-    
-    uint256 public nextCommentId = 1;
-    address public owner;
-    
-    // Events
-    event CommentCreated(uint256 indexed commentId, address indexed author, uint256 indexed postId, string content);
-    event CommentUpdated(uint256 indexed commentId, address indexed author, string content);
-    event CommentDeleted(uint256 indexed commentId, address indexed author);
-    
-    // Modifiers
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Only owner can perform this action");
+
+
+    // --- Events ---
+
+    event CommentCreated(uint256 indexed postId, uint256 indexed commentId, address indexed author);
+    event CommentUpdated(uint256 indexed commentId);
+    event CommentDeleted(uint256 indexed commentId);
+
+
+    // --- Modifiers ---
+
+    modifier commentExists(uint256 _commentId) {
+        require(_commentId < comments.length, "Comment does not exist.");
         _;
     }
-    
-    modifier onlyAuthor(uint256 commentId) {
-        require(comments[commentId].author == msg.sender, "Not the author");
+
+    modifier onlyAuthor(uint256 _commentId) {
+        require(comments[_commentId].author == msg.sender, "You are not the author of this comment.");
         _;
     }
-    
-    modifier commentExists(uint256 commentId) {
-        require(comments[commentId].id != 0, "Comment does not exist");
-        _;
-    }
-    
-    modifier notDeleted(uint256 commentId) {
-        require(!comments[commentId].isDeleted, "Comment is deleted");
-        _;
-    }
-    
-    constructor() {
-        owner = msg.sender;
-    }
-    
-    // Create a new comment
-    function createComment(
-        uint256 _postId,
-        string memory _content
-    ) public returns (uint256) {
-        uint256 commentId = nextCommentId++;
-        
-        comments[commentId] = CommentData({
-            id: commentId,
-            author: msg.sender,
-            content: _content,
+
+
+    // --- Functions ---
+
+    /**
+     * @dev Creates a new comment for a specific post.
+     * @param _postId The ID of the post to comment on.
+     * @param _contentHash The IPFS hash of the comment content.
+     */
+    function createComment(uint256 _postId, string memory _contentHash) public {
+        uint256 commentId = comments.length;
+
+        comments.push(CommentData({
+            commentId: commentId,
             postId: _postId,
+            author: msg.sender,
+            contentHash: _contentHash,
             createdAt: block.timestamp,
             updatedAt: block.timestamp,
-            isDeleted: false
-        });
-        
+            isActive: true
+        }));
+
+        // Link the new comment to both the user and the post.
         userComments[msg.sender].push(commentId);
         postComments[_postId].push(commentId);
-        
-        emit CommentCreated(commentId, msg.sender, _postId, _content);
-        return commentId;
+
+        emit CommentCreated(_postId, commentId, msg.sender);
     }
-    
-    // Update comment content
-    function updateComment(
-        uint256 _commentId,
-        string memory _content
-    ) public commentExists(_commentId) onlyAuthor(_commentId) notDeleted(_commentId) {
-        comments[_commentId].content = _content;
-        comments[_commentId].updatedAt = block.timestamp;
-        
-        emit CommentUpdated(_commentId, msg.sender, _content);
+
+    /**
+     * @dev Allows the original author to update their comment.
+     * @param _commentId The ID of the comment to update.
+     * @param _newContentHash The new IPFS hash for the updated content.
+     */
+    function updateComment(uint256 _commentId, string memory _newContentHash) public commentExists(_commentId) onlyAuthor(_commentId) {
+        CommentData storage commentToUpdate = comments[_commentId];
+        require(commentToUpdate.isActive, "Comment is not active.");
+
+        commentToUpdate.contentHash = _newContentHash;
+        commentToUpdate.updatedAt = block.timestamp;
+
+        emit CommentUpdated(_commentId);
     }
-    
-    // Soft delete a comment
+
+    /**
+     * @dev Allows the original author to soft-delete their comment.
+     */
     function deleteComment(uint256 _commentId) public commentExists(_commentId) onlyAuthor(_commentId) {
-        comments[_commentId].isDeleted = true;
+        comments[_commentId].isActive = false;
         comments[_commentId].updatedAt = block.timestamp;
-        
-        emit CommentDeleted(_commentId, msg.sender);
+
+        emit CommentDeleted(_commentId);
     }
-    
-    // View functions
-    function getComment(uint256 _commentId) public view commentExists(_commentId) returns (CommentData memory) {
-        return comments[_commentId];
-    }
-    
-    function getUserComments(address _user) public view returns (uint256[] memory) {
-        return userComments[_user];
-    }
-    
-    function getPostComments(uint256 _postId) public view returns (uint256[] memory) {
+
+    // --- View Functions ---
+
+    /**
+     * @dev Gets all comment IDs for a specific post. A great feature for the frontend.
+     */
+    function getCommentsByPost(uint256 _postId) public view returns (uint256[] memory) {
         return postComments[_postId];
     }
-    
-    function getTotalComments() public view returns (uint256) {
-        return nextCommentId - 1;
+
+    /**
+     * @dev Gets all comment IDs for a specific user.
+     */
+    function getCommentsByUser(address _user) public view returns (uint256[] memory) {
+        return userComments[_user];
     }
-    
-    function isCommentDeleted(uint256 _commentId) public view commentExists(_commentId) returns (bool) {
-        return comments[_commentId].isDeleted;
-    }
-    
-    // Get comments for a post with pagination
-    function getPostCommentsPaginated(
-        uint256 _postId,
-        uint256 _offset,
-        uint256 _limit
-    ) public view returns (uint256[] memory) {
-        uint256[] memory allComments = postComments[_postId];
-        uint256 length = allComments.length;
-        
-        if (_offset >= length) {
-            return new uint256[](0);
-        }
-        
-        uint256 end = _offset + _limit;
-        if (end > length) {
-            end = length;
-        }
-        
-        uint256[] memory result = new uint256[](end - _offset);
-        for (uint i = _offset; i < end; i++) {
-            result[i - _offset] = allComments[i];
-        }
-        
-        return result;
-    }
-}   
+}
+

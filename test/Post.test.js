@@ -1,212 +1,124 @@
-import { expect } from "chai";
-import { network } from "hardhat";
+const { expect } = require("chai");
+const { ethers } = require("hardhat");
 
-describe("Post Contract", function () {
+describe("Post (Refactored)", function () {
+  let socialToken;
   let postContract;
   let owner;
-  let addr1;
-  let addr2;
-  let ethers;
+  let author1;
+  let tipper1;
 
-  // This hook runs once before all tests in this block
-  before(async function () {
-    const { ethers: ethersInstance } = await network.connect();
-    ethers = ethersInstance;
-    [owner, addr1, addr2] = await ethers.getSigners();
+  beforeEach(async function () {
+    [owner, author1, tipper1] = await ethers.getSigners();
+
+    // 1. Deploy the dependency contract: SocialToken
+    const SocialTokenFactory = await ethers.getContractFactory("SocialToken");
+    socialToken = await SocialTokenFactory.deploy();
+
+    // 2. Deploy the Post contract, providing the token's address to its constructor
     const PostFactory = await ethers.getContractFactory("Post");
-    postContract = await PostFactory.deploy();
+    postContract = await PostFactory.deploy(await socialToken.getAddress());
   });
 
-  describe("Post Creation", function () {
+  describe("Post Creation and Updates", function () {
     it("Should allow a user to create a post", async function () {
-      const testContent = "This is my first post!";
-      const testImageHashes = ["QmImageHash1", "QmImageHash2"];
-
-      // Create post and check for event emission
-      await expect(postContract.connect(addr1).createPost(testContent, testImageHashes))
+      const contentHash = "QmContentHash1";
+      // The first post ID will be 0
+      await expect(postContract.connect(author1).createPost(contentHash))
         .to.emit(postContract, "PostCreated")
-        .withArgs(1, addr1.address, testContent);
+        .withArgs(0, author1.address, contentHash);
 
-      // Verify post data
-      const post = await postContract.getPost(1);
-      expect(post.id).to.equal(1);
-      expect(post.author).to.equal(addr1.address);
-      expect(post.content).to.equal(testContent);
-      expect(post.imageHashes).to.deep.equal(testImageHashes);
-      expect(post.commentCount).to.equal(0);
+      const post = await postContract.posts(0);
+      expect(post.author).to.equal(author1.address);
+      expect(post.contentHash).to.equal(contentHash);
       expect(post.isActive).to.be.true;
     });
 
-    it("Should increment post ID for each new post", async function () {
-      const testContent = "Second post";
-      const testImageHashes = ["QmImageHash3"];
-
-      await postContract.connect(addr2).createPost(testContent, testImageHashes);
-
-      const post = await postContract.getPost(2);
-      expect(post.id).to.equal(2);
-      expect(post.author).to.equal(addr2.address);
+    it("Should add the post ID to the user's post list", async function () {
+        await postContract.connect(author1).createPost("QmContentHash1"); // Post ID 0
+        await postContract.connect(author1).createPost("QmContentHash2"); // Post ID 1
+        
+        const userPosts = await postContract.getPostsByUser(author1.address);
+        expect(userPosts.length).to.equal(2);
+        expect(userPosts[0]).to.equal(0);
+        expect(userPosts[1]).to.equal(1);
     });
 
-    it("Should track user posts correctly", async function () {
-      const userPosts = await postContract.getUserPosts(addr1.address);
-      expect(userPosts).to.deep.equal([1]);
+    it("Should allow the author to update their post", async function () {
+      await postContract.connect(author1).createPost("QmOriginalHash");
+      const newContentHash = "QmNewContentHash";
 
-      const user2Posts = await postContract.getUserPosts(addr2.address);
-      expect(user2Posts).to.deep.equal([2]);
-    });
-  });
-
-  describe("Post Updates", function () {
-    it("Should allow author to update their post", async function () {
-      const newContent = "Updated post content";
-      const newImageHashes = ["QmNewImageHash"];
-
-      await expect(postContract.connect(addr1).updatePost(1, newContent, newImageHashes))
+      await expect(postContract.connect(author1).updatePost(0, newContentHash))
         .to.emit(postContract, "PostUpdated")
-        .withArgs(1, addr1.address, newContent);
+        .withArgs(0, newContentHash);
 
-      const post = await postContract.getPost(1);
-      expect(post.content).to.equal(newContent);
-      expect(post.imageHashes).to.deep.equal(newImageHashes);
-      expect(post.updatedAt).to.be.greaterThan(post.createdAt);
-    });
-
-    it("Should not allow non-author to update post", async function () {
-      const newContent = "Unauthorized update";
-      const newImageHashes = ["QmUnauthorizedHash"];
-
-      await expect(
-        postContract.connect(addr2).updatePost(1, newContent, newImageHashes)
-      ).to.be.revertedWith("Not the author");
-    });
-
-    it("Should not allow updating non-existent post", async function () {
-      const newContent = "Update non-existent";
-      const newImageHashes = ["QmHash"];
-
-      await expect(
-        postContract.connect(addr1).updatePost(999, newContent, newImageHashes)
-      ).to.be.revertedWith("Post does not exist");
+      const updatedPost = await postContract.posts(0);
+      expect(updatedPost.contentHash).to.equal(newContentHash);
     });
   });
 
   describe("Post Deletion", function () {
-    it("Should allow author to delete their post", async function () {
-      await expect(postContract.connect(addr1).deletePost(1))
+     beforeEach(async function () {
+      await postContract.connect(author1).createPost("QmContentHash1");
+    });
+    
+    it("Should allow the author to delete their post", async function () {
+      await expect(postContract.connect(author1).deletePost(0))
         .to.emit(postContract, "PostDeleted")
-        .withArgs(1, addr1.address);
+        .withArgs(0);
 
-      const post = await postContract.getPost(1);
+      const post = await postContract.posts(0);
       expect(post.isActive).to.be.false;
     });
 
-    it("Should not allow non-author to delete post", async function () {
+    it("Should NOT allow a non-author to delete a post", async function () {
       await expect(
-        postContract.connect(addr2).deletePost(2)
-      ).to.be.revertedWith("Not the author");
-    });
-
-    it("Should not allow operations on deleted posts", async function () {
-      const newContent = "Try to update deleted post";
-      const newImageHashes = ["QmHash"];
-
-      await expect(
-        postContract.connect(addr1).updatePost(1, newContent, newImageHashes)
-      ).to.be.revertedWith("Post is not active");
+        postContract.connect(tipper1).deletePost(0)
+      ).to.be.revertedWith("You are not the author of this post.");
     });
   });
 
-  describe("Comment Management", function () {
-    it("Should allow adding comments to active posts", async function () {
-      await expect(postContract.connect(addr1).addComment(2, 101))
-        .to.emit(postContract, "CommentAdded")
-        .withArgs(2, 101);
-
-      const post = await postContract.getPost(2);
-      expect(post.commentCount).to.equal(1);
-      expect(post.commentIds).to.deep.equal([101]);
-    });
-
-    it("Should not allow adding comments to deleted posts", async function () {
-      await expect(
-        postContract.connect(addr1).addComment(1, 102)
-      ).to.be.revertedWith("Post is not active");
-    });
-
-    it("Should track multiple comments correctly", async function () {
-      await postContract.connect(addr2).addComment(2, 103);
+  describe("Tipping", function () {
+    beforeEach(async function () {
+      // author1 creates a post (ID 0)
+      await postContract.connect(author1).createPost("QmPostToTip");
       
-      const post = await postContract.getPost(2);
-      expect(post.commentCount).to.equal(2);
-      expect(post.commentIds).to.deep.equal([101, 103]);
-    });
-  });
-
-  describe("View Functions", function () {
-    it("Should return correct post data", async function () {
-      const post = await postContract.getPost(2);
-      expect(post.id).to.equal(2);
-      expect(post.author).to.equal(addr2.address);
-      expect(post.isActive).to.be.true;
+      // The owner mints 1000 tokens to tipper1
+      const mintAmount = ethers.parseUnits("1000", 18);
+      await socialToken.connect(owner).mint(tipper1.address, mintAmount);
     });
 
-    it("Should return user posts correctly", async function () {
-      const userPosts = await postContract.getUserPosts(addr2.address);
-      expect(userPosts).to.deep.equal([2]);
+    it("Should allow a user to tip a post after approving the token transfer", async function () {
+      const tipAmount = ethers.parseUnits("150", 18);
+
+      // Step 1: tipper1 must approve the Post contract to spend its tokens
+      await socialToken.connect(tipper1).approve(await postContract.getAddress(), tipAmount);
+      
+      // Step 2: tipper1 calls the tipPost function
+      await expect(postContract.connect(tipper1).tipPost(0, tipAmount))
+        .to.emit(postContract, "PostTipped")
+        .withArgs(0, tipper1.address, tipAmount);
+
+      // Check balances after the tip
+      const authorBalance = await socialToken.balanceOf(author1.address);
+      const tipperBalance = await socialToken.balanceOf(tipper1.address);
+      expect(authorBalance).to.equal(tipAmount);
+      expect(tipperBalance).to.equal(ethers.parseUnits("850", 18)); // 1000 - 150
+
+      // Check that the post's tipJar was updated
+      const post = await postContract.posts(0);
+      expect(post.tipJar).to.equal(tipAmount);
     });
 
-    it("Should return post comment IDs", async function () {
-      const commentIds = await postContract.getPostCommentIds(2);
-      expect(commentIds).to.deep.equal([101, 103]);
-    });
-
-    it("Should return total posts count", async function () {
-      const totalPosts = await postContract.getTotalPosts();
-      expect(totalPosts).to.equal(2);
-    });
-
-    it("Should check if post is active", async function () {
-      const isActive = await postContract.isPostActive(2);
-      expect(isActive).to.be.true;
-
-      const isDeletedActive = await postContract.isPostActive(1);
-      expect(isDeletedActive).to.be.false;
-    });
-  });
-
-  describe("Access Control", function () {
-    it("Should set correct owner", async function () {
-      const contractOwner = await postContract.owner();
-      expect(contractOwner).to.equal(owner.address);
-    });
-
-    it("Should not allow operations on non-existent posts", async function () {
+    it("Should fail if a user tries to tip without prior approval", async function () {
+      const tipAmount = ethers.parseUnits("100", 18);
+      
+      // We skip the approve() step. The underlying ERC20 contract will revert with
+      // a custom error. We check for that specific error from the `socialToken` contract.
       await expect(
-        postContract.getPost(999)
-      ).to.be.revertedWith("Post does not exist");
-    });
-  });
-
-  describe("Edge Cases", function () {
-    it("Should handle empty image hashes array", async function () {
-      const testContent = "Post with no images";
-      const emptyImageHashes = [];
-
-      await postContract.connect(addr1).createPost(testContent, emptyImageHashes);
-
-      const post = await postContract.getPost(3);
-      expect(post.imageHashes).to.deep.equal([]);
-    });
-
-    it("Should handle empty content", async function () {
-      const emptyContent = "";
-      const testImageHashes = ["QmHash"];
-
-      await postContract.connect(addr2).createPost(emptyContent, testImageHashes);
-
-      const post = await postContract.getPost(4);
-      expect(post.content).to.equal("");
+        postContract.connect(tipper1).tipPost(0, tipAmount)
+      ).to.be.revertedWithCustomError(socialToken, "ERC20InsufficientAllowance");
     });
   });
 });
+
