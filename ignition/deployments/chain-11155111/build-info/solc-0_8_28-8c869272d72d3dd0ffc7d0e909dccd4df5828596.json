@@ -1,0 +1,39 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-8c869272d72d3dd0ffc7d0e909dccd4df5828596",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/Comment.sol": "project/contracts/Comment.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/Comment.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.20;\r\n\r\n/**\r\n * @title Comment (Refactored)\r\n * @dev Manages comments on posts. This version is gas-efficient by storing\r\n * comment content on IPFS and includes advanced view functions for frontend convenience.\r\n */\r\ncontract Comment {\r\n    // --- State Variables ---\r\n\r\n    struct CommentData {\r\n        uint256 commentId;\r\n        uint256 postId;         // The ID of the post this comment belongs to.\r\n        address author;         // Renamed from 'commenter' for consistency.\r\n        string contentHash;     // CRITICAL: We store a hash of the content, not the content itself.\r\n        uint256 createdAt;\r\n        uint256 updatedAt;\r\n        bool isActive;          // Renamed from 'isDeleted' for consistency with Post.sol\r\n    }\r\n\r\n    // The primary storage for all comments.\r\n    CommentData[] public comments;\r\n\r\n    // Mappings for efficient lookups, a great feature from the provided contract.\r\n    mapping(address => uint256[]) public userComments;\r\n    mapping(uint256 => uint256[]) public postComments;\r\n\r\n\r\n    // --- Events ---\r\n\r\n    event CommentCreated(uint256 indexed postId, uint256 indexed commentId, address indexed author);\r\n    event CommentUpdated(uint256 indexed commentId);\r\n    event CommentDeleted(uint256 indexed commentId);\r\n\r\n\r\n    // --- Modifiers ---\r\n\r\n    modifier commentExists(uint256 _commentId) {\r\n        require(_commentId < comments.length, \"Comment does not exist.\");\r\n        _;\r\n    }\r\n\r\n    modifier onlyAuthor(uint256 _commentId) {\r\n        require(comments[_commentId].author == msg.sender, \"You are not the author of this comment.\");\r\n        _;\r\n    }\r\n\r\n\r\n    // --- Functions ---\r\n\r\n    /**\r\n     * @dev Creates a new comment for a specific post.\r\n     * @param _postId The ID of the post to comment on.\r\n     * @param _contentHash The IPFS hash of the comment content.\r\n     */\r\n    function createComment(uint256 _postId, string memory _contentHash) public {\r\n        uint256 commentId = comments.length;\r\n\r\n        comments.push(CommentData({\r\n            commentId: commentId,\r\n            postId: _postId,\r\n            author: msg.sender,\r\n            contentHash: _contentHash,\r\n            createdAt: block.timestamp,\r\n            updatedAt: block.timestamp,\r\n            isActive: true\r\n        }));\r\n\r\n        // Link the new comment to both the user and the post.\r\n        userComments[msg.sender].push(commentId);\r\n        postComments[_postId].push(commentId);\r\n\r\n        emit CommentCreated(_postId, commentId, msg.sender);\r\n    }\r\n\r\n    /**\r\n     * @dev Allows the original author to update their comment.\r\n     * @param _commentId The ID of the comment to update.\r\n     * @param _newContentHash The new IPFS hash for the updated content.\r\n     */\r\n    function updateComment(uint256 _commentId, string memory _newContentHash) public commentExists(_commentId) onlyAuthor(_commentId) {\r\n        CommentData storage commentToUpdate = comments[_commentId];\r\n        require(commentToUpdate.isActive, \"Comment is not active.\");\r\n\r\n        commentToUpdate.contentHash = _newContentHash;\r\n        commentToUpdate.updatedAt = block.timestamp;\r\n\r\n        emit CommentUpdated(_commentId);\r\n    }\r\n\r\n    /**\r\n     * @dev Allows the original author to soft-delete their comment.\r\n     */\r\n    function deleteComment(uint256 _commentId) public commentExists(_commentId) onlyAuthor(_commentId) {\r\n        comments[_commentId].isActive = false;\r\n        comments[_commentId].updatedAt = block.timestamp;\r\n\r\n        emit CommentDeleted(_commentId);\r\n    }\r\n\r\n    // --- View Functions ---\r\n\r\n    /**\r\n     * @dev Gets all comment IDs for a specific post. A great feature for the frontend.\r\n     */\r\n    function getCommentsByPost(uint256 _postId) public view returns (uint256[] memory) {\r\n        return postComments[_postId];\r\n    }\r\n\r\n    /**\r\n     * @dev Gets all comment IDs for a specific user.\r\n     */\r\n    function getCommentsByUser(address _user) public view returns (uint256[] memory) {\r\n        return userComments[_user];\r\n    }\r\n}\r\n\r\n"
+      }
+    }
+  }
+}
