@@ -1,7 +1,28 @@
 {
+  "name": "decentralized-social-network",
+  "version": "1.0.0",
+  "description": "A decentralized social network built with Solidity smart contracts",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx hardhat test",
+    "compile": "npx hardhat compile",
+    "deploy:local": "npx hardhat ignition deploy ignition/modules/DeploySocialNetwork.ts --network localhost",
+    "deploy:sepolia": "npx hardhat ignition deploy ignition/modules/DeploySocialNetwork.ts --network sepolia",
+    "clean": "npx hardhat clean"
+  },
+  "keywords": [
+    "blockchain",
+    "ethereum",
+    "solidity",
+    "hardhat",
+    "social-network"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
   "devDependencies": {
     "@nomicfoundation/hardhat-ignition": "^3.0.3",
     "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^3.0.0",
+    "@nomicfoundation/hardhat-verify": "^3.0.2",
     "@types/chai": "^4.3.20",
     "@types/chai-as-promised": "^8.0.2",
     "@types/mocha": "^10.0.10",

@@ -1,17 +1,107 @@
-# Sample Hardhat 3 Beta Project (`mocha` and `ethers`)
+# Decentralized Social Network
 
-This project showcases a Hardhat 3 Beta project using `mocha` for tests and the `ethers` library for Ethereum interactions.
-
-To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+A decentralized social network built with Solidity smart contracts, featuring user profiles, posts, comments, and a social token economy.
 
 ## Project Overview
 
-This example project includes:
+This project includes:
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using `mocha` and ethers.js
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+- **Smart Contracts**: UserProfile, Post, Comment, and SocialToken contracts
+- **Testing**: Comprehensive test suite using Mocha and Chai
+- **Deployment**: Hardhat Ignition deployment scripts
+- **TypeScript**: Full TypeScript support for development
+
+## Prerequisites
+
+- Node.js (v16 or higher)
+- npm or yarn
+- Git
+
+## Quick Start
+
+### 1. Clone the repository
+```bash
+git clone <your-repo-url>
+cd decentralized-social-network
+```
+
+### 2. Install dependencies
+```bash
+npm install
+```
+
+### 3. Compile contracts
+```bash
+npm run compile
+```
+
+### 4. Run tests
+```bash
+npm test
+```
+
+### 5. Deploy to local network
+```bash
+npm run deploy:local
+```
+
+## Environment Setup
+
+### For Sepolia Testnet Deployment
+
+1. **Create a `.env` file** in the project root:
+```bash
+# Copy the example file and fill in your values
+cp .env.example .env
+# Then edit .env with your actual values
+```
+
+Required environment variables:
+- `SEPOLIA_RPC_URL`: Your Sepolia RPC endpoint (Infura, Alchemy, etc.)
+- `SEPOLIA_PRIVATE_KEY`: Your wallet's private key
+- `ETHERSCAN_API_KEY`: Your Etherscan API key (optional, for contract verification)
+
+2. **Get Sepolia ETH** from a faucet:
+   - [Alchemy Sepolia Faucet](https://sepoliafaucet.com/)
+   - [Chainlink Sepolia Faucet](https://faucets.chain.link/sepolia)
+
+3. **Deploy to Sepolia**:
+```bash
+npm run deploy:sepolia
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**"Gas estimation failed: gas required exceeds allowance (0)"**
+- This means your account has no ETH. Get test ETH from a Sepolia faucet.
+
+**"Cannot find module" errors**
+- Run `npm install` to install all dependencies
+- Make sure you're using Node.js v16 or higher
+
+**"Contract compilation failed"**
+- Run `npx hardhat clean` then `npx hardhat compile`
+- Check that all Solidity files are in the `contracts/` directory
+
+**Test failures**
+- Ensure all dependencies are installed: `npm install`
+- Run tests with: `npx hardhat test`
+
+## Project Structure
+
+```
+├── contracts/           # Solidity smart contracts
+│   ├── UserProfile.sol  # User profile management
+│   ├── Post.sol        # Post creation and management
+│   ├── Comment.sol     # Comment system
+│   └── SocialToken.sol # ERC20 token for the platform
+├── test/               # Test files
+├── ignition/           # Deployment scripts
+├── scripts/            # Utility scripts
+└── hardhat.config.ts   # Hardhat configuration
+```
 
 ## Usage
 
