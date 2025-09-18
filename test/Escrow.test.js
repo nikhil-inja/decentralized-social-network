@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { network } from "hardhat";
 
 describe("EscrowFactory", function () {
   let arbiterRegistry;
@@ -8,8 +8,11 @@ describe("EscrowFactory", function () {
   let client;
   let freelancer;
   let arbiter;
+  let ethers;
 
   beforeEach(async function () {
+    const { ethers: ethersInstance } = await network.connect();
+    ethers = ethersInstance;
     [owner, client, freelancer, arbiter] = await ethers.getSigners();
 
     // Deploy the ArbiterRegistry dependency

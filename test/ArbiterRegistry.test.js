@@ -1,13 +1,16 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { network } from "hardhat";
 
 describe("ArbiterRegistry", function () {
   let arbiterRegistry;
   let owner;
   let addr1; // Potential Arbiter
   let addr2; // Random user
+  let ethers;
 
   beforeEach(async function () {
+    const { ethers: ethersInstance } = await network.connect();
+    ethers = ethersInstance;
     [owner, addr1, addr2] = await ethers.getSigners();
     const ArbiterRegistryFactory = await ethers.getContractFactory("ArbiterRegistry");
     arbiterRegistry = await ArbiterRegistryFactory.deploy();
