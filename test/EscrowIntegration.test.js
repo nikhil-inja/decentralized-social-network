@@ -105,11 +105,15 @@ describe("Escrow Platform Integration Tests", function () {
 
   describe("Unhappy Path: Disputes and Errors", function () {
     let escrowContract;
-    const totalAmount = ethers.parseUnits("1000", 18);
+    let totalAmount;
+    let payouts;
 
     beforeEach(async function() {
+        // Initialize amounts after ethers is available
+        totalAmount = ethers.parseUnits("1000", 18);
+        payouts = [ethers.parseUnits("400", 18), ethers.parseUnits("600", 18)];
+        
         // Create a standard 2-milestone escrow for dispute tests
-        const payouts = [ethers.parseUnits("400", 18), ethers.parseUnits("600", 18)];
         await escrowFactory.connect(client).createEscrow(freelancer.address, arbiter.address, await socialToken.getAddress(), payouts, ["M1", "M2"]);
         const escrowAddress = (await escrowFactory.getEscrowContracts())[0];
         escrowContract = await ethers.getContractAt("Escrow", escrowAddress);

@@ -37,8 +37,12 @@
   "type": "module",
   "dependencies": {
     "@openzeppelin/contracts": "^5.4.0",
+    "@rainbow-me/rainbowkit": "^2.2.8",
+    "@tanstack/react-query": "^5.89.0",
     "dotenv": "^17.2.2",
     "pinata": "^2.5.0",
-    "react-native-document-picker": "^9.3.1"
+    "react-native-document-picker": "^9.3.1",
+    "viem": "^2.37.6",
+    "wagmi": "^2.17.0"
   }
 }
