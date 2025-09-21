@@ -1,6 +1,6 @@
 // frontend/app/create/page.tsx
 'use client';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ethers } from 'ethers';
 import { useAccount, useWriteContract } from 'wagmi';
