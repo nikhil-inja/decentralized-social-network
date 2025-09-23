@@ -1,147 +1,115 @@
-# Decentralized Social Network
+# Decentralized Escrow Service
 
-A decentralized social network built with Solidity smart contracts, featuring user profiles, posts, comments, and a social token economy.
+A full-stack escrow platform with on-chain arbitration. It includes Solidity smart contracts, a Next.js web app, and a Go caching service.
 
-## Project Overview
+## What’s Inside
 
-This project includes:
-
-- **Smart Contracts**: UserProfile, Post, Comment, and SocialToken contracts
-- **Testing**: Comprehensive test suite using Mocha and Chai
-- **Deployment**: Hardhat Ignition deployment scripts
-- **TypeScript**: Full TypeScript support for development
+- **Smart Contracts (Hardhat + Ignition)**: `Escrow.sol`, `EscrowFactory.sol`, `ArbiterRegistry.sol`, `UserProfile.sol`, `SocialToken.sol`
+- **Web Frontend (Next.js)**: `frontend/`
+- **Caching Service (Go)**: `caching-service/` connects to the local Hardhat node and tracks blocks/events
+- **Tests**: Mocha/Chai tests under `test/`
 
 ## Prerequisites
 
-- Node.js (v16 or higher)
-- npm or yarn
+- Node.js ≥ 18
+- npm (or yarn/pnpm)
+- Go ≥ 1.22 (for `caching-service`)
 - Git
 
 ## Quick Start
 
-### 1. Clone the repository
-```bash
-git clone <your-repo-url>
-cd decentralized-social-network
-```
+1) Install dependencies (root + frontend):
 
-### 2. Install dependencies
 ```bash
 npm install
+cd frontend && npm install && cd ..
 ```
 
-### 3. Compile contracts
+2) Start a local Hardhat node and deploy contracts:
+
 ```bash
-npm run compile
+npx hardhat node
+# In a new terminal
+npx hardhat ignition deploy ignition/modules/DeployEscrowPlatform.ts --network localhost
 ```
 
-### 4. Run tests
+3) Seed local dev data (register an arbiter, deploy mock token):
+
 ```bash
-npm test
+npx ts-node scripts/setupDev.ts
 ```
 
-### 5. Deploy to local network
+4) Run the caching service (optional but recommended):
+
 ```bash
-npm run deploy:local
+cd caching-service
+go mod tidy
+go run .
 ```
 
-## Environment Setup
+5) Run the web app:
 
-### For Sepolia Testnet Deployment
-
-1. **Create a `.env` file** in the project root:
 ```bash
-# Copy the example file and fill in your values
-cp .env.example .env
-# Then edit .env with your actual values
+cd frontend
+npm run dev
+# Open http://localhost:3000
 ```
 
-Required environment variables:
-- `SEPOLIA_RPC_URL`: Your Sepolia RPC endpoint (Infura, Alchemy, etc.)
-- `SEPOLIA_PRIVATE_KEY`: Your wallet's private key
-- `ETHERSCAN_API_KEY`: Your Etherscan API key (optional, for contract verification)
+ 
 
-2. **Get Sepolia ETH** from a faucet:
-   - [Alchemy Sepolia Faucet](https://sepoliafaucet.com/)
-   - [Chainlink Sepolia Faucet](https://faucets.chain.link/sepolia)
+## Environment Variables
 
-3. **Deploy to Sepolia**:
+Create a `.env` in the project root for testnet deployments:
+
+```
+SEPOLIA_RPC_URL=...
+SEPOLIA_PRIVATE_KEY=...
+ETHERSCAN_API_KEY=...
+```
+
+`hardhat.config.ts` already uses safe fallbacks for missing values. For Sepolia deploy:
+
 ```bash
-npm run deploy:sepolia
+npx hardhat ignition deploy ignition/modules/DeployEscrowPlatform.ts --network sepolia
+```
+
+## Contract Addresses (local)
+
+Local deployments are recorded by Ignition under `ignition/deployments/chain-31337/deployed_addresses.json`. Copy addresses into `frontend/contracts/config.js` if needed for the web UI.
+
+## Repo Structure
+
+```
+contracts/                 # Solidity contracts
+frontend/                  # Next.js web app
+caching-service/           # Go block/event cache and utilities
+ignition/                  # Ignition deployment modules and records
+scripts/                   # Dev helpers (e.g., setupDev.ts, send-op-tx.ts)
+test/                      # Contract tests
+hardhat.config.ts          # Networks + plugins
+```
+
+## Common Commands
+
+```bash
+# compile and test
+npx hardhat compile
+npx hardhat test
+
+# clean & recompile
+npx hardhat clean && npx hardhat compile
+
+# run a local node
+npx hardhat node
 ```
 
 ## Troubleshooting
 
-### Common Issues
+- Missing Go dependencies when running `caching-service`: run `go mod tidy` first.
+- PowerShell chaining: use `;` instead of `&&` (e.g., `go mod tidy; go run .`).
+- If frontend can’t find contracts, ensure you’ve deployed locally and updated `frontend/contracts/config.js` with addresses from Ignition.
+- If Sepolia deploy fails for lack of funds, get test ETH from a faucet and set `SEPOLIA_PRIVATE_KEY`.
 
-**"Gas estimation failed: gas required exceeds allowance (0)"**
-- This means your account has no ETH. Get test ETH from a Sepolia faucet.
+## Notes
 
-**"Cannot find module" errors**
-- Run `npm install` to install all dependencies
-- Make sure you're using Node.js v16 or higher
-
-**"Contract compilation failed"**
-- Run `npx hardhat clean` then `npx hardhat compile`
-- Check that all Solidity files are in the `contracts/` directory
-
-**Test failures**
-- Ensure all dependencies are installed: `npm install`
-- Run tests with: `npx hardhat test`
-
-## Project Structure
-
-```
-├── contracts/           # Solidity smart contracts
-│   ├── UserProfile.sol  # User profile management
-│   ├── Post.sol        # Post creation and management
-│   ├── Comment.sol     # Comment system
-│   └── SocialToken.sol # ERC20 token for the platform
-├── test/               # Test files
-├── ignition/           # Deployment scripts
-├── scripts/            # Utility scripts
-└── hardhat.config.ts   # Hardhat configuration
-```
-
-## Usage
-
-### Running Tests
-
-To run all the tests in the project, execute the following command:
-
-```shell
-npx hardhat test
-```
-
-You can also selectively run the Solidity or `mocha` tests:
-
-```shell
-npx hardhat test solidity
-npx hardhat test mocha
-```
-
-### Make a deployment to Sepolia
-
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
-
-To run the deployment to a local chain:
-
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
-```
-
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
-
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
-
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
-
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
-```
-
-After setting the variable, you can run the deployment with the Sepolia network:
-
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
-```
+- `scripts/setupDev.ts` expects a local `ArbiterRegistry` at `0x5FbDB2...aa3` (Hardhat default first deployment address). If you redeploy, update the address or read it from Ignition’s `deployed_addresses.json`.

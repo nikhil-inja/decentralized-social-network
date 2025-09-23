@@ -1,12 +1,10 @@
 // scripts/setupDev.ts
-import hre from "hardhat";
-
-// Type assertion to access ethers
-const { ethers } = hre as any;
+import { network } from "hardhat";
 
 async function main() {
   console.log("🚀 Starting development setup...");
 
+  const { ethers } = await network.connect();
   const [owner, , , arbiterAccount] = await ethers.getSigners();
 
   // --- 1. Get Deployed ArbiterRegistry ---
@@ -17,19 +15,27 @@ async function main() {
 
   // --- 2. Add an Arbiter ---
   console.log(`- Registering ${arbiterAccount.address} as an arbiter...`);
-  try {
-    const tx = await arbiterRegistry.connect(owner).addArbiter(
-      arbiterAccount.address,
-      "Dev Arbiter",
-      "Qm..."
-    );
-    await tx.wait();
-    console.log("✅ Arbiter registered successfully!");
-  } catch (e) {
-    if (e instanceof Error && e.message.includes("Arbiter already exists")) {
-      console.log("ℹ️ Arbiter already registered.");
-    } else {
-      throw e;
+  
+  // Check if arbiter already exists first
+  const isAlreadyArbiter = await arbiterRegistry.isArbiterActive(arbiterAccount.address);
+  if (isAlreadyArbiter) {
+    console.log("ℹ️ Arbiter already registered and active.");
+  } else {
+    try {
+      const tx = await arbiterRegistry.connect(owner).addArbiter(
+        arbiterAccount.address,
+        "Dev Arbiter",
+        "Qm..."
+      );
+      await tx.wait();
+      console.log("✅ Arbiter registered successfully!");
+    } catch (e) {
+      if (e instanceof Error && (e.message.includes("Arbiter already exists") || e.message.includes("already exists"))) {
+        console.log("ℹ️ Arbiter already registered.");
+      } else {
+        console.error("❌ Error registering arbiter:", e);
+        throw e;
+      }
     }
   }
 
