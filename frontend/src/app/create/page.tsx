@@ -36,16 +36,49 @@ export default function CreateDealPage() {
       return;
     }
 
-    // Prepare arguments for the smart contract
-    const payouts = milestones.map(m => ethers.parseEther(m.amount)); // Assuming ETH/18 decimals
-    const descriptions = milestones.map(m => m.description);
+    // Validation
+    if (!freelancerAddress || !ethers.isAddress(freelancerAddress)) {
+      alert('Please enter a valid freelancer wallet address.');
+      return;
+    }
 
-    writeContract({
-      address: ESCROW_FACTORY_ADDRESS,
-      abi: EscrowFactoryABI as any,
-      functionName: 'createEscrow',
-      args: [freelancerAddress, selectedArbiter, tokenAddress, payouts, descriptions],
+    if (!selectedArbiter) {
+      alert('Please select an arbiter.');
+      return;
+    }
+
+    if (!tokenAddress || !ethers.isAddress(tokenAddress)) {
+      alert('Please enter a valid token contract address.');
+      return;
+    }
+
+    if (milestones.some(m => !m.description || !m.amount || parseFloat(m.amount) <= 0)) {
+      alert('Please fill in all milestone descriptions and amounts.');
+      return;
+    }
+
+    console.log('Form data:', {
+      freelancerAddress,
+      selectedArbiter,
+      tokenAddress,
+      milestones
     });
+
+    try {
+      // Prepare arguments for the smart contract
+      const payouts = milestones.map(m => ethers.parseEther(m.amount)); // Assuming ETH/18 decimals
+      const descriptions = milestones.map(m => m.description);
+
+      writeContract({
+        address: ESCROW_FACTORY_ADDRESS as `0x${string}`,
+        abi: EscrowFactoryABI as any,
+        functionName: 'createEscrow',
+        args: [freelancerAddress, selectedArbiter, tokenAddress, payouts, descriptions],
+      });
+    } catch (error) {
+      console.error('Error creating escrow:', error);
+      alert('Error creating escrow. Check console for details.');
+    }
   };
 
   if (!isConnected) {

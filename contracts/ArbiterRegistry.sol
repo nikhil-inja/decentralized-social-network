@@ -53,5 +53,9 @@ contract ArbiterRegistry is Ownable {
     function isArbiterActive(address _arbiterAddress) external view returns (bool) {
         return arbiters[_arbiterAddress].isActive;
     }
+
+    function getArbiterList() external view returns (address[] memory) {
+        return arbiterList;
+    }
 }
 
