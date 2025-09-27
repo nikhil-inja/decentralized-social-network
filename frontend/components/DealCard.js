@@ -3,14 +3,14 @@
 import Link from 'next/link';
 
 // A helper function to get status text and color
+// Status mapping for EscrowSimple: CREATED, FUNDED, IN_PROGRESS, COMPLETED, DISPUTED
 const getStatusInfo = (status) => {
   switch (status) {
     case 0: return { text: 'Created', color: 'bg-gray-200 text-gray-800' };
     case 1: return { text: 'Funded', color: 'bg-blue-200 text-blue-800' };
     case 2: return { text: 'In Progress', color: 'bg-indigo-200 text-indigo-800' };
-    case 3: return { text: 'Disputed', color: 'bg-red-200 text-red-800' };
-    case 4: return { text: 'Completed', color: 'bg-green-200 text-green-800' };
-    case 5: return { text: 'Canceled', color: 'bg-gray-500 text-white' };
+    case 3: return { text: 'Completed', color: 'bg-green-200 text-green-800' };
+    case 4: return { text: 'Disputed', color: 'bg-red-200 text-red-800' };
     default: return { text: 'Unknown', color: 'bg-gray-200 text-gray-800' };
   }
 };

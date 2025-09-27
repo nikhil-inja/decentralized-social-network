@@ -17,17 +17,8 @@ export default function CreateDealPage() {
   const [freelancerAddress, setFreelancerAddress] = useState('');
   const [tokenAddress, setTokenAddress] = useState(''); // e.g., USDC address
   const [selectedArbiter, setSelectedArbiter] = useState('');
-  const [milestones, setMilestones] = useState([{ description: '', amount: '' }]);
-
-  const handleAddMilestone = () => {
-    setMilestones([...milestones, { description: '', amount: '' }]);
-  };
-
-  const handleMilestoneChange = (index: number, field: keyof typeof milestones[0], value: string) => {
-    const newMilestones = [...milestones];
-    newMilestones[index][field] = value;
-    setMilestones(newMilestones);
-  };
+  const [projectDescription, setProjectDescription] = useState('');
+  const [projectAmount, setProjectAmount] = useState('');
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -52,8 +43,8 @@ export default function CreateDealPage() {
       return;
     }
 
-    if (milestones.some(m => !m.description || !m.amount || parseFloat(m.amount) <= 0)) {
-      alert('Please fill in all milestone descriptions and amounts.');
+    if (!projectDescription || !projectAmount || parseFloat(projectAmount) <= 0) {
+      alert('Please fill in project description and a valid amount.');
       return;
     }
 
@@ -61,19 +52,20 @@ export default function CreateDealPage() {
       freelancerAddress,
       selectedArbiter,
       tokenAddress,
-      milestones
+      projectDescription,
+      projectAmount
     });
 
     try {
-      // Prepare arguments for the smart contract
-      const payouts = milestones.map(m => ethers.parseEther(m.amount)); // Assuming ETH/18 decimals
-      const descriptions = milestones.map(m => m.description);
+      // Prepare arguments for the simplified smart contract
+      const amount = ethers.parseEther(projectAmount);
 
+      // Use simplified interface (single values, not arrays)
       writeContract({
         address: ESCROW_FACTORY_ADDRESS as `0x${string}`,
         abi: EscrowFactoryABI as any,
         functionName: 'createEscrow',
-        args: [freelancerAddress, selectedArbiter, tokenAddress, payouts, descriptions],
+        args: [freelancerAddress, selectedArbiter, tokenAddress, amount, projectDescription], // Single values
       });
     } catch (error) {
       console.error('Error creating escrow:', error);
@@ -122,32 +114,36 @@ export default function CreateDealPage() {
         
         <ArbiterList onArbiterSelected={setSelectedArbiter} />
 
-        {/* Step 2: Milestones */}
+        {/* Step 2: Project Details */}
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Milestones</h2>
-          {milestones.map((milestone, index) => (
-            <div key={index} className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
-              <input
-                type="text"
-                placeholder={`Milestone ${index + 1} Description`}
-                value={milestone.description}
-                onChange={(e) => handleMilestoneChange(index, 'description', e.target.value)}
-                className="flex-grow p-2 border border-gray-300 rounded-md"
-                required
-              />
-              <input
-                type="number"
-                placeholder="Amount"
-                value={milestone.amount}
-                onChange={(e) => handleMilestoneChange(index, 'amount', e.target.value)}
-                className="w-32 p-2 border border-gray-300 rounded-md"
-                required
-              />
-            </div>
-          ))}
-          <button type="button" onClick={handleAddMilestone} className="text-sm text-blue-600 hover:underline">
-            + Add Another Milestone
-          </button>
+          <h2 className="text-xl font-semibold">Project Details</h2>
+          
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700">Project Description</label>
+            <textarea
+              id="description"
+              placeholder="Describe the work to be completed..."
+              value={projectDescription}
+              onChange={(e) => setProjectDescription(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-md"
+              rows={4}
+              required
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="amount" className="block text-sm font-medium text-gray-700">Total Payment Amount (in tokens)</label>
+            <input
+              id="amount"
+              type="number"
+              step="0.01"
+              placeholder="e.g., 100"
+              value={projectAmount}
+              onChange={(e) => setProjectAmount(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-md"
+              required
+            />
+          </div>
         </div>
 
         {/* Step 3: Submit */}

@@ -5,10 +5,17 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
 import { useMyDeals } from '../../hooks/useMyDeals';
 import DealCard from '../../components/DealCard';
+import { useState, useEffect } from 'react';
 
 export default function Home() {
   const { isConnected } = useAccount();
   const { deals, isLoading } = useMyDeals();
+  const [isClient, setIsClient] = useState(false);
+
+  // Set client-side flag to prevent hydration mismatches
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   return (
     <div>
@@ -21,7 +28,7 @@ export default function Home() {
         {/* --- ADD THIS SECTION --- */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold text-gray-800">My Deals</h2>
-          {isConnected && (
+          {isClient && isConnected && (
             <Link href="/create" className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200">
               + Create New Deal
             </Link>
@@ -29,7 +36,9 @@ export default function Home() {
         </div>
         {/* --- END SECTION --- */}
         
-        {!isConnected ? (
+        {!isClient ? (
+          <div className="text-center text-gray-500 p-8">Loading...</div>
+        ) : !isConnected ? (
           <div className="text-center text-gray-500 p-8 bg-gray-50 rounded-lg">Please connect your wallet to see your deals.</div>
         ) : isLoading ? (
           <div className="text-center text-gray-500 p-8">Loading your deals...</div>

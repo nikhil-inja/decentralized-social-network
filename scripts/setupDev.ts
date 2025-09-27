@@ -8,7 +8,7 @@ async function main() {
   const [owner, , , arbiterAccount] = await ethers.getSigners();
 
   // --- 1. Get Deployed ArbiterRegistry ---
-  const ARBITER_REGISTRY_ADDR = process.env.ARBITER_REGISTRY_ADDRESS as string;
+  const ARBITER_REGISTRY_ADDR = "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82";
   const arbiterRegistry = await ethers.getContractAt("ArbiterRegistry", ARBITER_REGISTRY_ADDR);
   console.log(`- Attached to ArbiterRegistry at: ${ARBITER_REGISTRY_ADDR}`);
 
@@ -45,6 +45,23 @@ async function main() {
   await socialToken.waitForDeployment();
   const tokenAddress = await socialToken.getAddress();
   console.log(`✅ Mock Token deployed at: ${tokenAddress}`);
+  
+  // --- 4. Mint tokens to test accounts ---
+  console.log("\n- Minting tokens to test accounts...");
+  const mintAmount = ethers.parseEther("1000"); // 1000 tokens each
+  
+  const signers = await ethers.getSigners();
+  const client = signers[1];
+  const freelancer = signers[2];
+  
+  await socialToken.connect(owner).mint(owner.address, mintAmount);
+  await socialToken.connect(owner).mint(client.address, mintAmount);
+  await socialToken.connect(owner).mint(freelancer.address, mintAmount);
+  
+  console.log(`✅ Minted ${ethers.formatEther(mintAmount)} tokens to:`);
+  console.log(`  - Owner: ${owner.address}`);
+  console.log(`  - Client: ${client.address}`);
+  console.log(`  - Freelancer: ${freelancer.address}`);
   
   console.log("\n🎉 Development setup complete! Use the Mock Token address for your deals.");
 }
