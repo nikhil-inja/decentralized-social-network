@@ -8,7 +8,7 @@ async function main() {
   const [owner, , , arbiterAccount] = await ethers.getSigners();
 
   // --- 1. Get Deployed ArbiterRegistry ---
-  const ARBITER_REGISTRY_ADDR = "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82";
+  const ARBITER_REGISTRY_ADDR = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
   const arbiterRegistry = await ethers.getContractAt("ArbiterRegistry", ARBITER_REGISTRY_ADDR);
   console.log(`- Attached to ArbiterRegistry at: ${ARBITER_REGISTRY_ADDR}`);
 
